@@ -12,7 +12,7 @@ from matplotlib import pyplot as plt
 from matplotlib.offsetbox import AnchoredText
 from statsmodels.stats.anova import anova_lm
 
-sns.set(rc={"figure.dpi": 125, 'savefig.dpi': 300})
+sns.set(rc={"figure.dpi": 125, "savefig.dpi": 300})
 
 
 class Tools:
@@ -20,37 +20,66 @@ class Tools:
     def corr_test(gc_pvalues, true_inf, true_coef, package, decay, cwd, verbose=True, sig_lvl=0.05, partial=False):
         # checks the correlation between the coefficients of the VAR model and Granger-test results
         p = gc_pvalues.shape[0]
-        act_coeffs_p_val_corr, p_val_causal_infl_corr = Tools.calc_corr(gc_pvalues=gc_pvalues, true_inf=true_inf,
-                                                                        true_coef=true_coef, p=p, partial=partial)
+        act_coeffs_p_val_corr, p_val_causal_infl_corr = Tools.calc_corr(
+            gc_pvalues=gc_pvalues, true_inf=true_inf, true_coef=true_coef, p=p, partial=partial
+        )
         with sns.axes_style("darkgrid"):
             sns.set_color_codes()
             fg = plt.figure(figsize=(12, 5), tight_layout=True)
             ax = fg.gca()
             x_ticks = np.arange(1, p + 1)
-            plt.plot(x_ticks, decay, color=sns.color_palette("tab10")[0], marker="^",
-                     label="Strength decrease of the coefficients",
-                     ls="dotted", alpha=0.75, lw=1)
-            plt.plot(x_ticks, p_val_causal_infl_corr[:, 0, 0], marker="+",
-                     label=f"Point biserial correlation (true causal influence, GC p-values)",
-                     ls="--", alpha=0.4, color=sns.color_palette("tab10")[1], lw=1.5)
-            plt.plot(x_ticks, act_coeffs_p_val_corr[:, 0, 0], marker="d",
-                     label=f"Pearson correlation (true coefficients, GC p-values)",
-                     ls="--", alpha=0.4, color=sns.color_palette("tab10")[2], lw=1.5)
-            plt.plot(x_ticks,
-                     np.where(p_val_causal_infl_corr[:, 0, 1] < sig_lvl, p_val_causal_infl_corr[:, 0, 0], np.nan),
-                     color=sns.color_palette("tab10")[1],
-                     marker="P",
-                     ls="solid", lw=2)
-            plt.plot(x_ticks,
-                     np.where(act_coeffs_p_val_corr[:, 0, 1] < sig_lvl, act_coeffs_p_val_corr[:, 0, 0], np.nan),
-                     color=sns.color_palette("tab10")[2],
-                     marker="D",
-                     ls="solid", lw=2)
+            plt.plot(
+                x_ticks,
+                decay,
+                color=sns.color_palette("tab10")[0],
+                marker="^",
+                label="Strength decrease of the coefficients",
+                ls="dotted",
+                alpha=0.75,
+                lw=1,
+            )
+            plt.plot(
+                x_ticks,
+                p_val_causal_infl_corr[:, 0, 0],
+                marker="+",
+                label=f"Point biserial correlation (true causal influence, GC p-values)",
+                ls="--",
+                alpha=0.4,
+                color=sns.color_palette("tab10")[1],
+                lw=1.5,
+            )
+            plt.plot(
+                x_ticks,
+                act_coeffs_p_val_corr[:, 0, 0],
+                marker="d",
+                label=f"Pearson correlation (true coefficients, GC p-values)",
+                ls="--",
+                alpha=0.4,
+                color=sns.color_palette("tab10")[2],
+                lw=1.5,
+            )
+            plt.plot(
+                x_ticks,
+                np.where(p_val_causal_infl_corr[:, 0, 1] < sig_lvl, p_val_causal_infl_corr[:, 0, 0], np.nan),
+                color=sns.color_palette("tab10")[1],
+                marker="P",
+                ls="solid",
+                lw=2,
+            )
+            plt.plot(
+                x_ticks,
+                np.where(act_coeffs_p_val_corr[:, 0, 1] < sig_lvl, act_coeffs_p_val_corr[:, 0, 0], np.nan),
+                color=sns.color_palette("tab10")[2],
+                marker="D",
+                ls="solid",
+                lw=2,
+            )
             at = AnchoredText(
-                    f"A saturated marker/solid line indicates significance at {sig_lvl:.0%}",
-                    prop=dict(size=10),
-                    frameon=True,
-                    loc="lower right")
+                f"A saturated marker/solid line indicates significance at {sig_lvl:.0%}",
+                prop=dict(size=10),
+                frameon=True,
+                loc="lower right",
+            )
             at.patch.set_alpha(0.5)
             at.patch.set_boxstyle("round,pad=0.,rounding_size=0.2")
             ax.add_artist(at)
@@ -59,8 +88,9 @@ class Tools:
             plt.ylabel("(Correlation)")
             plt.ylim(-1.05, 1.05)
             plt.title(
-                    f"Correlation btw. the true influence [binary] and coefficients [continuous], and the GC p-values ["
-                    f"continuous] (package: {package})")
+                f"Correlation btw. the true influence [binary] and coefficients [continuous], and the GC p-values ["
+                f"continuous] (package: {package})"
+            )
             ax.legend(loc="best")
             plt.savefig(fname=f"{cwd}/corr_{package}_{str(datetime.datetime.now())}.pdf", format="pdf")
             if verbose:
@@ -110,30 +140,33 @@ class Tools:
 
     @staticmethod
     def calc_corr(gc_pvalues, true_inf, true_coef, p, partial=False):
-        '''
+        """
         Calculates the correlation coefficients (see appendix of the paper for a detailed explanation)
-        '''
+        """
         p_val_caus_infl_corr = np.zeros((p, 1, 2))
         act_coeffs_p_val_corr = np.zeros((p, 1, 2))
         for l in np.arange(p):
             if partial:
-                act_coeffs_p_val_corr[l] = np.array(scs.pearsonr(true_coef[l].flatten(),
-                                                                 gc_pvalues[l].flatten()))
-                p_val_caus_infl_corr[l] = np.array(scs.pointbiserialr(true_inf[l].flatten(),
-                                                                      gc_pvalues[l].flatten()))
+                act_coeffs_p_val_corr[l] = np.array(scs.pearsonr(true_coef[l].flatten(), gc_pvalues[l].flatten()))
+                p_val_caus_infl_corr[l] = np.array(scs.pointbiserialr(true_inf[l].flatten(), gc_pvalues[l].flatten()))
                 continue
             if true_coef.shape[1] != gc_pvalues.shape[1]:
-                gc_pvalue_ext = np.tile(np.tile(gc_pvalues[l], true_coef.shape[2] - 1).reshape(-1, true_coef.shape[2]),
-                                        l + 1)
-                act_coeffs_p_val_corr[l] = np.array(scs.pearsonr(true_coef[:(l + 1)].flatten(),
-                                                                 gc_pvalue_ext.flatten()))
-                p_val_caus_infl_corr[l] = np.array(scs.pointbiserialr(true_inf[:(l + 1)].flatten(),
-                                                                      gc_pvalue_ext.flatten()))
+                gc_pvalue_ext = np.tile(
+                    np.tile(gc_pvalues[l], true_coef.shape[2] - 1).reshape(-1, true_coef.shape[2]), l + 1
+                )
+                act_coeffs_p_val_corr[l] = np.array(
+                    scs.pearsonr(true_coef[: (l + 1)].flatten(), gc_pvalue_ext.flatten())
+                )
+                p_val_caus_infl_corr[l] = np.array(
+                    scs.pointbiserialr(true_inf[: (l + 1)].flatten(), gc_pvalue_ext.flatten())
+                )
             else:
-                act_coeffs_p_val_corr[l] = np.array(scs.pearsonr(true_coef[:(l + 1)].flatten(),
-                                                                 np.tile(gc_pvalues[l], l + 1).flatten()))
-                p_val_caus_infl_corr[l] = np.array(scs.pointbiserialr(true_inf[:(l + 1)].flatten(),
-                                                                      np.tile(gc_pvalues[l], l + 1).flatten()))
+                act_coeffs_p_val_corr[l] = np.array(
+                    scs.pearsonr(true_coef[: (l + 1)].flatten(), np.tile(gc_pvalues[l], l + 1).flatten())
+                )
+                p_val_caus_infl_corr[l] = np.array(
+                    scs.pointbiserialr(true_inf[: (l + 1)].flatten(), np.tile(gc_pvalues[l], l + 1).flatten())
+                )
         return act_coeffs_p_val_corr, p_val_caus_infl_corr
 
     @staticmethod
@@ -141,23 +174,35 @@ class Tools:
         confusion_matrices = list()
         for lag, est in enumerate(predictions):
             confusion_matrices.append(
-                    skm.confusion_matrix(y_true=actual[:(lag + 1)].flatten().astype(int), y_pred=est.flatten(),
-                                         labels=[0, 1]))
+                skm.confusion_matrix(
+                    y_true=actual[: (lag + 1)].flatten().astype(int), y_pred=est.flatten(), labels=[0, 1]
+                )
+            )
         return confusion_matrices
 
     @staticmethod
     def plot_true_detections(confusion_matrices, test_type, package, decay, cwd, verbose=True):
         with sns.axes_style("darkgrid"):
             cf_res = np.array(
-                    [[np.divide(np.trace(i), i.sum()), 1 - np.divide(np.trace(i), i.sum())] for i in
-                     confusion_matrices])
+                [[np.divide(np.trace(i), i.sum()), 1 - np.divide(np.trace(i), i.sum())] for i in confusion_matrices]
+            )
             fg = plt.figure(figsize=(10, 5))
             x_ticks = np.arange(1, len(confusion_matrices) + 1)
-            plt.plot(x_ticks, decay, color=sns.color_palette("tab10")[0], marker="^",
-                     label="Strength decrease of the coefficients",
-                     ls="dotted")
-            plt.plot(x_ticks, cf_res[:][:, 0], color=sns.color_palette("tab10")[1],
-                     marker="o", label="Rate of detected causal influences")
+            plt.plot(
+                x_ticks,
+                decay,
+                color=sns.color_palette("tab10")[0],
+                marker="^",
+                label="Strength decrease of the coefficients",
+                ls="dotted",
+            )
+            plt.plot(
+                x_ticks,
+                cf_res[:][:, 0],
+                color=sns.color_palette("tab10")[1],
+                marker="o",
+                label="Rate of detected causal influences",
+            )
             plt.title(f"Rate of truly detected causal influences by lags (package: {package} | test-type: {test_type})")
             plt.xlabel("Lags")
             plt.ylabel("(Accuracy)")
@@ -176,23 +221,26 @@ class Tools:
         p = len(confusion_matrices)
         with sns.axes_style("ticks"):
             fig, axes = plt.subplots(nrows=p, figsize=(10, 5 * len(confusion_matrices)), ncols=2, tight_layout=True)
-            fig.suptitle(f"Confusion matrices of <{package_name}>", y=.99)
+            fig.suptitle(f"Confusion matrices of <{package_name}>", y=0.99)
             for i, ax in enumerate(axes.flat):
                 r = np.floor(i / 2).astype(int)
                 labels = [0, 1]
                 if i % 2 == 0:
-                    sns.heatmap(confusion_matrices[r], annot=True,
-                                cmap="Blues", ax=ax)
+                    sns.heatmap(confusion_matrices[r], annot=True, cmap="Blues", ax=ax)
                 else:
-                    sns.heatmap(confusion_matrices[r] / np.sum(confusion_matrices[r]), annot=True, fmt=".2%",
-                                cmap="Blues", ax=ax)
+                    sns.heatmap(
+                        confusion_matrices[r] / np.sum(confusion_matrices[r]),
+                        annot=True,
+                        fmt=".2%",
+                        cmap="Blues",
+                        ax=ax,
+                    )
                 ax.set_xlabel("\nPredicted Values")
                 ax.set_ylabel("Actual Values ")
                 ax.xaxis.set_ticklabels(labels)
                 ax.yaxis.set_ticklabels(labels)
                 ax.set_title(f"lags 1:{r + 1}")
-            plt.savefig(fname=f"{cwd}/confusion_mat_{package_name}_{str(datetime.datetime.now())}.pdf",
-                        format="pdf")
+            plt.savefig(fname=f"{cwd}/confusion_mat_{package_name}_{str(datetime.datetime.now())}.pdf", format="pdf")
             if verbose:
                 plt.show()
             else:
@@ -230,7 +278,8 @@ class Tools:
         data_labels = ["y"] + regressors
         # combine all values to one dataset
         val = np.hstack(
-                [y.iloc[p:].to_numpy().reshape(-1, 1), sm.lagmat(y, p)[p:, :], x.iloc[p:].to_numpy().reshape(-1, 1)])
+            [y.iloc[p:].to_numpy().reshape(-1, 1), sm.lagmat(y, p)[p:, :], x.iloc[p:].to_numpy().reshape(-1, 1)]
+        )
         data = pd.DataFrame(val, columns=data_labels)
         # restricted model
         r_formula = f"y ~  {' + '.join(str(r) for r in y_lags)}"

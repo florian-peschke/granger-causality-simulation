@@ -11,13 +11,14 @@ from pandas import DataFrame
 
 from CausalA import Tools as tb
 
-sns.set(rc={"figure.dpi": 125, 'savefig.dpi': 300})
+sns.set(rc={"figure.dpi": 125, "savefig.dpi": 300})
 
 
 class TS_Sim:
     """
     Class to generate the set of time series.
     """
+
     _are_bp_gen = False
     _are_coeffs_gen = False
     _coeffs_type_alo = ["Only AR", "Only DL", "ADL"]
@@ -25,12 +26,34 @@ class TS_Sim:
     # NND: Nearest-Neighbor decreasing strength
     _coeffs_form_alo = ["NNI", "NND", "Random"]
 
-    def __init__(self, samples, number_ts, lags=1, number_structural_breaks=0, seed=None, decay_basis=None,
-                 decay_velocity=None, ts_with_sb=None, coef_influence=None, coefficient_tensor=None,
-                 error_mean_tensor=None, error_covariance_tensor=None, break_points=None, trend=None, constant=None,
-                 coeffs_type="Only DL", coeffs_form="NNI", tril=True, alpha=2, beta=2, decay_strength=1, cwd="./",
-                 scale_var=1, scale_cov=0, allow_neg_coeffs=False) -> \
-            None:
+    def __init__(
+        self,
+        samples,
+        number_ts,
+        lags=1,
+        number_structural_breaks=0,
+        seed=None,
+        decay_basis=None,
+        decay_velocity=None,
+        ts_with_sb=None,
+        coef_influence=None,
+        coefficient_tensor=None,
+        error_mean_tensor=None,
+        error_covariance_tensor=None,
+        break_points=None,
+        trend=None,
+        constant=None,
+        coeffs_type="Only DL",
+        coeffs_form="NNI",
+        tril=True,
+        alpha=2,
+        beta=2,
+        decay_strength=1,
+        cwd="./",
+        scale_var=1,
+        scale_cov=0,
+        allow_neg_coeffs=False,
+    ) -> None:
         """
         If a parameter is optional, it will be randomly generated or calculated from existing values,
         when no explicit values are given.
@@ -97,8 +120,9 @@ class TS_Sim:
             self.A = coefficient_tensor
         else:
             self.__gen_coeffs()
-        self.init_error_mean_vec = error_mean_tensor if error_mean_tensor is not None else np.zeros(shape=(1, self.k,
-                                                                                                           1))
+        self.init_error_mean_vec = (
+            error_mean_tensor if error_mean_tensor is not None else np.zeros(shape=(1, self.k, 1))
+        )
         self.__set_error(error_covariance_tensor=error_covariance_tensor)
         self.__set_break_points(break_points)
         self.trend = trend if trend is not None else np.zeros(self.k)
@@ -116,25 +140,30 @@ class TS_Sim:
         self.a = np.array([d / np.power(i, decay_strength) for i in np.arange(1, self.p + 1)])
 
     def __set_error(self, error_covariance_tensor):
-        '''
+        """
         Generates the mean and variance-covariance tensor of the error terms
-        '''
-        self.err_mean = self.init_error_mean_vec if self.nsb == 0 else np.vstack(
-                [self.init_error_mean_vec, np.abs(self.rdg.standard_t(df=1, size=(
-                    self.nsb, self.k, 1)))])
+        """
+        self.err_mean = (
+            self.init_error_mean_vec
+            if self.nsb == 0
+            else np.vstack([self.init_error_mean_vec, np.abs(self.rdg.standard_t(df=1, size=(self.nsb, self.k, 1)))])
+        )
         self.err_cov = error_covariance_tensor if error_covariance_tensor is not None else self.__gen_cov()
 
     def __gen_cov(self) -> ndarray:
         return np.array(
-                [self.__gen_corr(size=(self.k, self.k),
-                                 var=np.abs(self.rdg.normal(loc=0, scale=self.scale_var, size=self.k)))
-                 for _ in
-                 np.arange(self.nsb + 1)])
+            [
+                self.__gen_corr(
+                    size=(self.k, self.k), var=np.abs(self.rdg.normal(loc=0, scale=self.scale_var, size=self.k))
+                )
+                for _ in np.arange(self.nsb + 1)
+            ]
+        )
 
     def __gen_corr(self, size, var):
-        '''
+        """
         Creating the positive definitevariance-covariance matrix of the error terms.
-        '''
+        """
         mat = np.multiply(np.tril(self.rdg.normal(size=size)), self.scale_cov)
         np.fill_diagonal(mat, var)
         sigma = mat @ mat.T
@@ -143,39 +172,41 @@ class TS_Sim:
         return positive_semi_definite
 
     def __set_break_points(self, break_points):
-        '''
+        """
         Generates the time points for each time series where it should break.
-        '''
+        """
         if break_points is not None:
             self.pure_bp = break_points
         else:
-            self.pure_bp = np.multiply(np.array(self.rdg.choice(np.arange(1, self.T),
-                                                                replace=False,
-                                                                size=(self.nsb, self.k))), self.ts_wsb.T)
+            self.pure_bp = np.multiply(
+                np.array(self.rdg.choice(np.arange(1, self.T), replace=False, size=(self.nsb, self.k))), self.ts_wsb.T
+            )
 
             self._are_bp_gen = True
         self._break_points = self.__wrap_bp(self.pure_bp + self.p)
         self._break_points[:].sort(axis=0)
 
     def __wrap_bp(self, break_points):
-        return np.vstack([np.repeat(self.p, repeats=self.k),
-                          break_points,
-                          np.repeat(self.T + self.p, repeats=self.k)])[:, :, np.newaxis]
+        return np.vstack([np.repeat(self.p, repeats=self.k), break_points, np.repeat(self.T + self.p, repeats=self.k)])[
+            :, :, np.newaxis
+        ]
 
     def __set_coef_det(self, coeffs_type, coeffs_form):
         if coeffs_type not in self._coeffs_type_alo:
             raise Warning(
-                    f"Test type {coeffs_type} is not supported. Supported test types are: {self._coeffs_type_alo}")
+                f"Test type {coeffs_type} is not supported. Supported test types are: {self._coeffs_type_alo}"
+            )
         if coeffs_form not in self._coeffs_form_alo:
             raise Warning(
-                    f"Test type {coeffs_form} is not supported. Supported test types are: {self._coeffs_form_alo}")
+                f"Test type {coeffs_form} is not supported. Supported test types are: {self._coeffs_form_alo}"
+            )
         self.coeffs_type = coeffs_type
         self.coeffs_form = coeffs_form
 
     def __gen_coeffs(self) -> None:
-        '''
+        """
         Generating the main coefficients by incorporating the vanishing/decay rates.
-        '''
+        """
         self.A = np.zeros((self.p, self.k, self.k))
         self.A_base = self.__gen_main_coef_mat()
         self.A_proc = self.__process_coeffs_type(self.A_base)
@@ -184,31 +215,45 @@ class TS_Sim:
         else:
             self.D = self.rdg.choice(a=[0, 1], size=(self.p, self.k, self.k))
         for d in np.arange(self.p):
-            signs = self.rdg.choice(a=[-1, 1], size=(self.k, self.k)) if self.allow_neg_coeffs else np.ones((self.k,
-                                                                                                             self.k))
-            np.multiply(signs,
-                        np.multiply(self.D[d], np.multiply(self.a[d], self.A_proc)), out=self.A[d])
+            signs = (
+                self.rdg.choice(a=[-1, 1], size=(self.k, self.k))
+                if self.allow_neg_coeffs
+                else np.ones((self.k, self.k))
+            )
+            np.multiply(signs, np.multiply(self.D[d], np.multiply(self.a[d], self.A_proc)), out=self.A[d])
         self._are_coeffs_gen = True
 
     def __gen_main_coef_mat(self):
-        '''
+        """
         Generating the coefficients by using the Beta distribution (see appendix in the paper).
-        '''
+        """
         ar = self.rdg.uniform(size=self.k)
         if self.coeffs_form == "NNI":
-            return np.array([np.concatenate(
-                    [tb.Tools.gen_values_from_beta_dist(self.alpha, self.beta, ar[i], i),
-                     [ar[i]],
-                     tb.Tools.gen_values_from_beta_dist(self.alpha, self.beta, ar[i], self.k - i - 1)[::-1]])
-                for i in
-                np.arange(self.k)])
+            return np.array(
+                [
+                    np.concatenate(
+                        [
+                            tb.Tools.gen_values_from_beta_dist(self.alpha, self.beta, ar[i], i),
+                            [ar[i]],
+                            tb.Tools.gen_values_from_beta_dist(self.alpha, self.beta, ar[i], self.k - i - 1)[::-1],
+                        ]
+                    )
+                    for i in np.arange(self.k)
+                ]
+            )
         elif self.coeffs_form == "NND":
-            return np.array([np.concatenate(
-                    [tb.Tools.gen_values_from_beta_dist(self.alpha, self.beta, ar[i], i)[::-1],
-                     [ar[i]],
-                     tb.Tools.gen_values_from_beta_dist(self.alpha, self.beta, ar[i], self.k - i - 1)])
-                for i in
-                np.arange(self.k)])
+            return np.array(
+                [
+                    np.concatenate(
+                        [
+                            tb.Tools.gen_values_from_beta_dist(self.alpha, self.beta, ar[i], i)[::-1],
+                            [ar[i]],
+                            tb.Tools.gen_values_from_beta_dist(self.alpha, self.beta, ar[i], self.k - i - 1),
+                        ]
+                    )
+                    for i in np.arange(self.k)
+                ]
+            )
         else:
             return self.rdg.uniform(size=(self.k, self.k))
 
@@ -225,10 +270,15 @@ class TS_Sim:
         """
         Function to generate structural breaks (individually for each time series).
         """
-        d = np.subtract([np.argmax(self._break_points[:, i, :] >= t) for i in np.arange(self._break_points.shape[1])],
-                        1)
-        return np.array([self.rdg.multivariate_normal(mean=self.err_mean[t].flatten(),
-                                                      cov=self.err_cov[t])[i] for i, t in enumerate(d)])
+        d = np.subtract(
+            [np.argmax(self._break_points[:, i, :] >= t) for i in np.arange(self._break_points.shape[1])], 1
+        )
+        return np.array(
+            [
+                self.rdg.multivariate_normal(mean=self.err_mean[t].flatten(), cov=self.err_cov[t])[i]
+                for i, t in enumerate(d)
+            ]
+        )
 
     def __matmul_lags(self, t, lag=None) -> ndarray:
         """
@@ -252,10 +302,13 @@ class TS_Sim:
         # generating the data for all time series
         # model is based on Lütkepohl (2005) New Introduction to Multiple Time Series Analysis
         for t in np.arange(self.p, self.T + self.p):
-            np.add.reduce([self.constant, np.multiply(self.trend, t - self.p), self.__matmul_lags(t), self.__gen_sb(t)],
-                          out=self.ts_data[:, t])
-        self.df_ts = pd.DataFrame(self.ts_data.T, columns=self.ts_names).drop(np.arange(self.p + 1)).reset_index(
-                drop=True)
+            np.add.reduce(
+                [self.constant, np.multiply(self.trend, t - self.p), self.__matmul_lags(t), self.__gen_sb(t)],
+                out=self.ts_data[:, t],
+            )
+        self.df_ts = (
+            pd.DataFrame(self.ts_data.T, columns=self.ts_names).drop(np.arange(self.p + 1)).reset_index(drop=True)
+        )
 
     def get_ts(self) -> DataFrame:
         return self.df_ts
@@ -266,14 +319,18 @@ class TS_Sim:
             fig, axes = plt.subplots(nrows=self.k, figsize=(10, 3 * self.k))
             fig.suptitle("Simulated time series")
             for ts, ax in enumerate(axes.flat):
-                legend_elements = [plt.Line2D([0], [0], lw=1,
-                                              label=f"{n2w.num2words(ts + 1, to='ordinal_num')} time series")]
+                legend_elements = [
+                    plt.Line2D([0], [0], lw=1, label=f"{n2w.num2words(ts + 1, to='ordinal_num')} time series")
+                ]
                 self.df_ts.iloc[:, ts].plot(lw=1, ax=ax)
                 if self.nsb > 0 and self.ts_wsb[ts] == 1:
                     for b in np.arange(1, self.nsb + 1):
                         ax.axvline(x=self._break_points[b, ts, 0] - self.p, linestyle="--", color="red", alpha=0.25)
-                    legend_elements.append(plt.Line2D([0], [0], linestyle="--", color="red", alpha=0.25,
-                                                      label=f"Breakpoints (n = {self.nsb})"))
+                    legend_elements.append(
+                        plt.Line2D(
+                            [0], [0], linestyle="--", color="red", alpha=0.25, label=f"Breakpoints (n = {self.nsb})"
+                        )
+                    )
                 ax.legend(handles=legend_elements, loc="best")
         plt.xlabel("Time")
         plt.tight_layout()
@@ -287,8 +344,10 @@ class TS_Sim:
         try:
             setattr(self, parameter_name, parameter_value)
         except NameError:
-            raise Warning(f"The attribute does not exist or has a typo. The following attributes can be accessed: "
-                          f"{self.__dict__}")
+            raise Warning(
+                f"The attribute does not exist or has a typo. The following attributes can be accessed: "
+                f"{self.__dict__}"
+            )
         self.rdg = np.random.default_rng(self.seed)
         self.time = str(datetime.datetime.now())
         if self._are_coeffs_gen:
@@ -310,7 +369,8 @@ class TS_Sim:
             "decay strength": self.decay_strength,
             "decay velocity": self.a,
             "number of structural breaks": self.nsb,
-            "time series with structural breaks": self.ts_names[self.ts_wsb.astype(bool).flatten()] if self.nsb > 0
+            "time series with structural breaks": self.ts_names[self.ts_wsb.astype(bool).flatten()]
+            if self.nsb > 0
             else [],
             "break point tensor": self._break_points[1:-1] - self.p,
             "trend": self.trend,
