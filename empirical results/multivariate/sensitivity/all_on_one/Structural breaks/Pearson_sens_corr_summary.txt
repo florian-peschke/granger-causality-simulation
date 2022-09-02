@@ -1,0 +1,9 @@
+\begin{tabular}{lrrrr}
+\hline
+              &      Mean &        Std. &       Min &   Max \\
+\hline
+ statsmodels  & -0.500093 & 0.000690459 & -0.505747 &  -0.5 \\
+ vars         & -0.464379 & 0.129727    & -0.505747 &   0   \\
+ All packages & -0.482236 & 0.0931421   & -0.505747 &   0   \\
+\hline
+\end{tabular}
